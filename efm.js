@@ -71,30 +71,33 @@ function Epub(epubfile, callback) {
     var metadata = {};   // Maps keys to metadata
     var data_urls = {};  // Maps filename to data URL of file contents
     var num_data_urls = 0;
-    zip.createReader(new zip.BlobReader(epubfile), function (zipReader) {
-        zipReader.getEntries(function (entries) {
-            for (i in entries) {
-                e = entries[i];
-                files[e.filename] = e;
-            }
-            zipReader.close();
-            getComponent("META-INF/container.xml", findOPF);
-            // This starts a chain of callbacks, which will eventually
-            // end with onLoaded().
-        });
-    }, console.error);
-    
+
+    //Function that starts loading everything.
+    //Called near the end of the Epub function, because no functions inside this function are hoisted upwards, which causes reference errors if we were to call this function now...
+    var startLoading = function() {
+        //Initialize everything: read the files...
+        var jzip = new JSZip(epubfile);
+        for (i in jzip.files) {
+            e = jzip.files[i];
+            files[i] = e;
+        }
+        // This starts a chain of callbacks, which will eventually
+        // end with onLoaded():
+        getComponent("META-INF/container.xml", findOPF);
+    }
+   
     // Find the location of the OPF file from container.xml
     findOPF = function (xml) {
         var doc = new DOMParser().parseFromString(xml, "text/xml");
         var opffn = doc.getElementsByTagName("rootfile")[0].getAttribute("full-path");
         getComponent(opffn, parseOPF(getDir(opffn)));
     };
-    
+
     // Parse the OPF file to get the spine, the table of contents, and
     // the metadata.
     parseOPF = function (reldir) {
         return function (xml) {
+            xml = xml.data;
             var doc = new DOMParser().parseFromString(xml, "text/xml");
             var idmap = {};
             var nav_href = null;
@@ -192,6 +195,7 @@ function Epub(epubfile, callback) {
     // Parse the Epub2 table of contents.
     parseNCX = function (reldir) {
         return function (ncxdata) {
+            ncxdata = ncxdata.data;
             var ncx = new DOMParser().parseFromString(ncxdata, "text/xml");
             var navmap = ncx.getElementsByTagName("navMap")[0];
             contents = self.parseNCXChildren(navmap, reldir);
@@ -234,36 +238,31 @@ function Epub(epubfile, callback) {
         var reldir = getDir(id);
         var ext = id.split('.').slice(-1)[0];
         if (["html", "htm", "xhtml", "xml"].indexOf(ext) != -1) {
-            files[id].getData(new zip.TextWriter(), function (data) {
-                var doc = new DOMParser().parseFromString(data, "text/xml");
-                
-                for (var tag in URL_TAGS) {
-                    var attribute = URL_TAGS[tag];
-                    var elements = doc.getElementsByTagName(tag);
-                    for (var i=0; i<elements.length; i++) {
-                        var element = elements[i];
-                        var path = joinPaths(reldir, element.getAttribute(attribute));
-                        var data_url = data_urls[path];
-                        if (data_url != undefined)
-                            element.setAttribute(attribute, data_url);
-                    }
+            var data = files[id].data;
+            var doc = new DOMParser().parseFromString(data, "text/xml");
+            
+            for (var tag in URL_TAGS) {
+                var attribute = URL_TAGS[tag];
+                var elements = doc.getElementsByTagName(tag);
+                for (var i=0; i<elements.length; i++) {
+                    var element = elements[i];
+                    var path = joinPaths(reldir, element.getAttribute(attribute));
+                    var data_url = data_urls[path];
+                    if (data_url != undefined)
+                        element.setAttribute(attribute, data_url);
                 }
-                
-                callback(new XMLSerializer().serializeToString(doc));
-            });
+            }
+            
+            callback(new XMLSerializer().serializeToString(doc));
         } else {
-            files[id].getData(new zip.TextWriter(), function (data) {
-                callback(data);
-            });
+            callback(files[id]);
         }
     };
-    
+
     // Return the content, via the callback, as a data URL.
     getEncodedComponent = function (id, callback) {
         var mime = MIMETYPES[id.split('.').slice(-1)[0]];
-        files[id].getData(new zip.Data64URIWriter(mime), function (data) {
-            callback(data);
-        });
+        callback("data:" + mime + ";base64," + btoa(files[id].asBinary()));
     };
     
     // Part of Monocle's book data object interface.
@@ -276,5 +275,7 @@ function Epub(epubfile, callback) {
     onLoaded = function () {
         callback(this);
     };
+
+    startLoading();
 }
 

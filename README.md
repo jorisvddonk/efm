@@ -13,17 +13,15 @@ deployed.
 
 Usage
 -----
-EFM uses the [zip.js][5] library for unzipping the Epub files, so you'll
-need that.  And of course, you need [Monocle][1] to actually display
+This branch of EFM uses the [JSZip][5] library for unzipping the Epub files, 
+so you'll need that.  And of course, you need [Monocle][1] to actually display
 the ebook in your browser.
-[5]: http://gildas-lormeau.github.com/zip.js/ "zip.js library"
+[5]: http://stuk.github.io/jszip/ "JSZip library"
 
 EFM provides a `Epub` object, which implements the book data interface.  It
 takes two arguments for its constructor: the Epub file as an [HTML5 file
 object][6] and a callback to be called when the `Epub` object has been
-initialized.  The callback is necessary because the zip.js library works
-asynchronously, so the parsing of the Epub file will not be done until
-after the `Epub` object is constructed.
+initialized.
 [6]: http://www.w3.org/TR/FileAPI/ "W3C File API"
 
 Thus, if we have a file input with `id="file"` and a div with `id="reader"`
@@ -116,3 +114,11 @@ Implementation Notes
 License
 -------
 EFM is distributed under the MIT license.
+
+
+Why this branch uses JSZip rather than zip.js
+-------
+zip.js doesn't work with ArrayBuffers, whereas JSZip does. In fact, zip.js
+seems to only work well with blobs loaded via XHRs. Unfortunately, some browsers
+do not support blobs or blob constructors, which means that EFM won't work on
+those browsers, unless JSZip is used together with arraybuffer-XHR2s.
