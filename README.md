@@ -51,13 +51,13 @@ that no conversion is needed whenever a client requests the book.  Think
 of all the electrons you'll save!
 
 That said, it is possible for EFM to work with remote Epub files.  The
-first argument of the `Epub` object can be a [HTML5 blob object][7], rather
-than a file object.  Conveniently, an [XMLHttpRequest][8] can be made to
-return a blob.  Thus, the simplest code to display a remote Epub file is
+first argument of the `Epub` object can be an arraybuffer, rather than
+a file object.  Conveniently, an [XMLHttpRequest][8] can be made to return
+an arraybuffer.  Thus, the simplest code to display a remote Epub file is
 ```javascript
 var request = new XMLHttpRequest();
 request.open("GET", "url/of/file.epub", true);
-request.responseType = "blob";
+request.responseType = "arraybuffer";
 request.onload = function () {
     new Epub(request.response, function (bookData) {
         Monocle.Reader("reader", bookData);
