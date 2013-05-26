@@ -97,7 +97,7 @@ function Epub(epubfile, callback) {
     // the metadata.
     parseOPF = function (reldir) {
         return function (xml) {
-            xml = xml.data;
+            xml = xml.asText();
             var doc = new DOMParser().parseFromString(xml, "text/xml");
             var idmap = {};
             var nav_href = null;
@@ -195,7 +195,7 @@ function Epub(epubfile, callback) {
     // Parse the Epub2 table of contents.
     parseNCX = function (reldir) {
         return function (ncxdata) {
-            ncxdata = ncxdata.data;
+            ncxdata = ncxdata.asText();
             var ncx = new DOMParser().parseFromString(ncxdata, "text/xml");
             var navmap = ncx.getElementsByTagName("navMap")[0];
             contents = self.parseNCXChildren(navmap, reldir);
@@ -238,7 +238,7 @@ function Epub(epubfile, callback) {
         var reldir = getDir(id);
         var ext = id.split('.').slice(-1)[0];
         if (["html", "htm", "xhtml", "xml"].indexOf(ext) != -1) {
-            var data = files[id].data;
+            var data = files[id].asText();
             var doc = new DOMParser().parseFromString(data, "text/xml");
             
             for (var tag in URL_TAGS) {
